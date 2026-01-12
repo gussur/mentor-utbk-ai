@@ -79,7 +79,10 @@
         }
         @keyframes kedip { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
-
+#quiz-container {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
 
 
     </style>
@@ -172,33 +175,33 @@
         }
     }
 
-     function loadSoal(link) {
+function loadSoal(link) {
         if(link.includes("MASUKKAN_LINK")) return alert("Link soal belum diisi di kodingan!");
         
         const btn = event.currentTarget;
         const oriText = btn.innerHTML;
         btn.innerHTML = "⏳ Mengacak Soal...";
         
-        Papa.parse(link, { download: true, header: true, complete: (res) => {
-            // 1. Ambil semua soal mentah dari CSV
-            let rawData = res.data.filter(r => r.Wacana || r.Pertanyaan);
-            
-            if(!rawData.length) { btn.innerHTML = oriText; return alert("Soal Kosong!"); }
+        Papa.parse(link, { 
+            download: true, 
+            header: true, 
+            delimiter: ",", // <--- INI OBATNYA! Memaksa pemisah harus koma.
+            complete: (res) => {
+                // 1. Ambil semua soal mentah dari CSV
+                let rawData = res.data.filter(r => r.Wacana || r.Pertanyaan);
+                
+                if(!rawData.length) { btn.innerHTML = oriText; return alert("Soal Kosong!"); }
 
-            // 2. FITUR ACAK (SHUFFLE)
-            // Mengacak urutan soal biar tidak bosan
-            rawData.sort(() => 0.5 - Math.random());
+                // 2. FITUR ACAK (SHUFFLE)
+                rawData.sort(() => 0.5 - Math.random());
 
-            // 3. FITUR BATASI (LIMIT)
-            // Jika soal ada 100, kita ambil 'JUMLAH_SOAL_MAX' saja (misal 15)
-            // Jika soal cuma 5 (kurang dari limit), ya ambil semuanya.
-            dataSoal = rawData.slice(0, JUMLAH_SOAL_MAX);
+                // 3. FITUR BATASI (LIMIT)
+                dataSoal = rawData.slice(0, JUMLAH_SOAL_MAX);
 
-            currentIdx = 0; score = 0; seconds = 0; userHistory = [];
-            startQuiz();
-        }, error: () => { btn.innerHTML = oriText; alert("Gagal mengambil soal. Cek Link!"); }});
+                currentIdx = 0; score = 0; seconds = 0; userHistory = [];
+                startQuiz();
+            }, error: () => { btn.innerHTML = oriText; alert("Gagal mengambil soal. Cek Link!"); }});
     }
-
     function startQuiz() {
         showPage('p-quiz'); renderQuestion();
         clearInterval(timerInterval);
@@ -253,7 +256,7 @@
     }
 
     function nextQuestion() {
-        if(currentIdx < dataSoal.length-1) { currentIdx++; renderQuestion(); } 
+        if(currentIdx < dataSoal.length-1) { currentIdx++; renderSoal(); startTimer() } 
         else { clearInterval(timerInterval); showPage('p-score'); document.getElementById('final-score').innerText = Math.round((score / (dataSoal.length*20)) * 1000); }
     }
 
@@ -336,7 +339,47 @@ async function tanyaAI() {
             btn.style.display = 'block';
             alert("⚠️ Maaf, server AI sedang sibuk. Silakan coba tekan tombol lagi dalam 1 menit.");
         }
-    }</script>
+    }
+
+// 👇👇👇 INI FUNGSI BARU, TARUH DI PALING BAWAH JS 👇👇👇
+    function renderSoal() {
+        // 1. Efek kedip (sembunyikan dulu)
+        const container = document.getElementById('quiz-container');
+        if(container) container.style.opacity = '0';
+
+        // 2. Ambil data soal berdasarkan index saat ini
+        if (!dataSoal || dataSoal.length === 0) return;
+// 2. PANGGIL FUNGSI BARU KITA
+    renderSoal();  //            
+            // Reset tampilan tombol
+            btn.className = "option-btn w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition-all mb-3 relative group";
+            btn.disabled = false;
+            btn.onclick = () => cekJawaban(opt); // Pasang fungsi klik
+            
+            // Isi teks opsi
+            let cleanText = marked.parse(soal[textKey] || "").replace(/<p>|<\/p>/g, "");
+            
+            btn.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <span class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">${opt}.</span>
+                    <span class="flex-1">${cleanText}</span>
+                </div>
+            `;
+        });
+
+        // 8. Panggil MathJax untuk merapikan rumus
+        if (window.MathJax) {
+            MathJax.typesetPromise([container]).then(() => {
+                if(container) container.style.opacity = '1'; // Munculkan lagi
+            }).catch(() => {
+                if(container) container.style.opacity = '1';
+            });
+        } else {
+            if(container) container.style.opacity = '1';
+        }
+    }
+
+</script>
 
 </body>
 </html>
