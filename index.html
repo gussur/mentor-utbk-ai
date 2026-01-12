@@ -152,7 +152,8 @@
         "📖 Literasi Bahasa Inggris": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS2vVvZZcN8doZ-hrB-fak6KhP0L69d0T-1MDlToCXeNF3RknJRoiUJDeATeeo68tya2N-VOKQNwK4o/pub?gid=0&single=true&output=csv"
     };
 
-    let dataSoal = [], userHistory = [], currentIdx = 0, score = 0, timerInterval, seconds = 0;
+    // Tambahkan variabel 'nyawa' di sini
+    let dataSoal = [], userHistory = [], currentIdx = 0, score = 0, timerInterval, seconds = 0, nyawa = 1;
 
     // --- NAVIGASI HALAMAN ---
     function showPage(id) {
@@ -178,24 +179,19 @@
         }
     }
 
-    // --- LOAD SOAL (DENGAN PERBAIKAN CSV) ---
+    // --- LOAD SOAL ---
     function loadSoal(link) {
         const btn = event.currentTarget;
         const oriText = btn.innerHTML;
         btn.innerHTML = "⏳ Mengacak Soal...";
         
         Papa.parse(link, { 
-            download: true, 
-            header: true, 
-            delimiter: ",", // WAJIB: Biar matematika '|' gak error
+            download: true, header: true, delimiter: ",", 
             complete: (res) => {
                 let rawData = res.data.filter(r => r.Wacana || r.Pertanyaan);
-                if(!rawData.length) { btn.innerHTML = oriText; return alert("Soal Kosong/Gagal Load!"); }
-
-                // Acak & Batasi
+                if(!rawData.length) { btn.innerHTML = oriText; return alert("Soal Kosong!"); }
                 rawData.sort(() => 0.5 - Math.random());
                 dataSoal = rawData.slice(0, JUMLAH_SOAL_MAX);
-
                 currentIdx = 0; score = 0; seconds = 0; userHistory = [];
                 startQuiz();
             }, 
@@ -205,9 +201,7 @@
 
     function startQuiz() {
         showPage('p-quiz'); 
-        renderSoal(); // Panggil fungsi render yang baru
-        
-        // Reset Timer
+        renderSoal(); 
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             seconds++; let m = Math.floor(seconds/60), s = seconds%60;
@@ -215,21 +209,22 @@
         }, 1000);
     }
 
-    // --- RENDER SOAL (VERSI LENGKAP & MATHJAX) ---
+    // --- RENDER SOAL (RESET NYAWA) ---
     function renderSoal() {
-        // 1. Sembunyikan dulu (Efek Kedip)
+        nyawa = 1; // 👈 Reset Nyawa setiap ganti soal
+        
         const container = document.getElementById('quiz-container');
-        container.style.opacity = '0';
+        container.style.opacity = '0'; // Efek kedip
 
         if (!dataSoal || dataSoal.length === 0) return;
         const soal = dataSoal[currentIdx];
 
-        // 2. Reset UI
+        // Reset UI
         document.getElementById('feedback-area').style.display = 'none';
         document.getElementById('btn-next').style.display = 'none';
         document.getElementById('soal-idx').innerText = `Soal ${currentIdx + 1}/${dataSoal.length}`;
 
-        // 3. Isi Konten
+        // Isi Konten
         const wacanaDiv = document.getElementById('wacana-text');
         if(soal.Wacana) { wacanaDiv.style.display="block"; wacanaDiv.innerHTML = marked.parse(soal.Wacana); }
         else { wacanaDiv.style.display="none"; }
@@ -242,158 +237,154 @@
 
         document.getElementById('pertanyaan-text').innerHTML = marked.parse(soal.Pertanyaan);
 
-        // 4. Isi Opsi
+        // Isi Opsi
         ['A','B','C','D','E'].forEach(opt => {
             const btn = document.getElementById(`opt-${opt}`);
-            const textKey = `Opsi_${opt}`;
+            // Reset Tombol Total
+            btn.className = "option-btn"; 
+            btn.disabled = false; 
+            btn.style.opacity = "1";
             
-            // Reset Tombol
-            btn.className = "option-btn"; // Reset style
-            btn.disabled = false;
-            
-            // Isi teks (hapus tag p bawaan marked)
-            let rawTxt = soal[textKey] || "";
+            let rawTxt = soal[`Opsi_${opt}`] || "";
             let cleanText = marked.parse(rawTxt).replace(/<p>|<\/p>/g, "");
-            
             btn.innerHTML = `<span class="label">${opt}.</span> <div style="flex:1;">${cleanText}</div>`;
         });
 
-        // 5. Render MathJax lalu munculkan (Fade In)
         if (window.MathJax) {
-            MathJax.typesetPromise([container]).then(() => {
-                container.style.opacity = '1';
-            }).catch(() => container.style.opacity = '1');
-        } else {
-            container.style.opacity = '1';
-        }
+            MathJax.typesetPromise([container]).then(() => container.style.opacity = '1')
+            .catch(() => container.style.opacity = '1');
+        } else { container.style.opacity = '1'; }
     }
 
-    // --- CEK JAWABAN (DENGAN CLUE & PEMBAHASAN) ---
+    // --- CEK JAWABAN (LOGIKA NYAWA DIPERBAIKI) ---
     function cekJawaban(pilihanUser) {
         const soal = dataSoal[currentIdx];
-        const kunci = parseInt(soal.Kunci); // Pastikan angka
+        const kunci = parseInt(soal.Kunci); 
         const mapPilihan = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4};
         const idxUser = mapPilihan[pilihanUser];
-        
         const btnUser = document.getElementById(`opt-${pilihanUser}`);
         const feedbackArea = document.getElementById('feedback-area');
 
-        // Kunci semua tombol
-        ['A','B','C','D','E'].forEach(opt => document.getElementById(`opt-${opt}`).disabled = true);
-
-        // Cek Benar/Salah
         let isCorrect = (idxUser === kunci);
+
+        // SKENARIO 1: BENAR
         if(isCorrect) {
             btnUser.classList.add('correct');
-            score += 20; 
-        } else {
+            // Skor: Kalau nyawa masih 1 dapat 20, kalau udah nyawa 2 dapat 10
+            score += (nyawa === 1 ? 20 : 10);
+            
+            // Kunci SEMUA tombol
+            ['A','B','C','D','E'].forEach(opt => document.getElementById(`opt-${opt}`).disabled = true);
+            
+            // Munculkan PEMBAHASAN
+            tampilkanFeedback(true, soal);
+        } 
+        // SKENARIO 2: SALAH
+        else {
             btnUser.classList.add('wrong');
-            // Kasih tau yang benar
-            const hurufKunci = ['A','B','C','D','E'][kunci];
-            document.getElementById(`opt-${hurufKunci}`).classList.add('correct');
+            btnUser.disabled = true; // Kunci tombol yang salah ini saja
+            
+            if(nyawa === 1) {
+                // SALAH PERTAMA -> MUNCUL CLUE
+                nyawa = 2; // Kurangi nyawa
+                feedbackArea.style.display = 'block';
+                // Cek ada clue gak?
+                let pesan = soal.Clue ? 
+                    `<div class="fb-box fb-clue">💡 <b>Belum Tepat.</b><br>${marked.parse(soal.Clue)}<br><i>Coba pilih jawaban lain!</i></div>` :
+                    `<div class="fb-box fb-clue">💡 <b>Belum Tepat.</b><br>Coba pikirkan lagi dan pilih jawaban lain!</div>`;
+                
+                feedbackArea.innerHTML = pesan;
+                if(window.MathJax) MathJax.typesetPromise([feedbackArea]);
+            } else {
+                // SALAH KEDUA -> GAME OVER -> MUNCUL PEMBAHASAN
+                // Kasih tau kunci jawaban
+                const hurufKunci = ['A','B','C','D','E'][kunci];
+                document.getElementById(`opt-${hurufKunci}`).classList.add('correct');
+                
+                // Kunci SEMUA tombol
+                ['A','B','C','D','E'].forEach(opt => document.getElementById(`opt-${opt}`).disabled = true);
+                
+                // Munculkan Pembahasan
+                tampilkanFeedback(false, soal);
+            }
         }
+        
+        // Simpan History (Hanya simpan kalau attempt terakhir atau benar)
+        // Biar history gak dobel-dobel
+        if(isCorrect || nyawa === 2) {
+             // Cek biar gak duplikat di array
+             const lastEntry = userHistory[userHistory.length - 1];
+             if(!lastEntry || lastEntry.soal !== soal.Pertanyaan) {
+                userHistory.push({
+                    soal: soal.Pertanyaan,
+                    jawabanUser: pilihanUser,
+                    kunci: ['A','B','C','D','E'][kunci],
+                    isCorrect: isCorrect
+                });
+             }
+        }
+    }
 
-        // Simpan History
-        userHistory.push({
-            soal: soal.Pertanyaan,
-            jawabanUser: pilihanUser,
-            kunci: ['A','B','C','D','E'][kunci],
-            isCorrect: isCorrect
-        });
-
-        // TAMPILKAN FEEDBACK
+    // Fungsi Helper biar rapi
+    function tampilkanFeedback(isBenar, soal) {
+        const feedbackArea = document.getElementById('feedback-area');
         feedbackArea.style.display = 'block';
-        let htmlContent = "";
         
-        // Clue (Kalau ada)
-        if(soal.Clue) {
-            htmlContent += `<div class="fb-box fb-clue">💡 <b>Clue:</b> ${marked.parse(soal.Clue)}</div>`;
-        }
-        // Pembahasan
+        let status = isBenar ? "✅ <b>Benar!</b>" : "❌ <b>Jawaban Kurang Tepat.</b>";
         let bahasText = soal.Pembahasan ? marked.parse(soal.Pembahasan) : "Pembahasan tidak tersedia.";
-        htmlContent += `<div class="fb-box fb-bahas">📘 <b>Pembahasan:</b><br>${bahasText}</div>`;
         
-        feedbackArea.innerHTML = htmlContent;
-
-        // Render ulang Matematika di bagian feedback
+        feedbackArea.innerHTML = `
+            <div class="fb-box fb-bahas">
+                ${status}<br><hr style="margin:10px 0; border:0; border-top:1px solid #bfdbfe;">
+                📘 <b>Pembahasan:</b><br>${bahasText}
+            </div>
+        `;
+        
         if(window.MathJax) MathJax.typesetPromise([feedbackArea]);
-
-        // Munculkan Tombol Lanjut
-        document.getElementById('btn-next').style.display = 'block';
+        document.getElementById('btn-next').style.display = 'block'; // Muncul tombol lanjut
     }
 
     // --- LANJUT SOAL ---
     function nextQuestion() {
         if(currentIdx < dataSoal.length - 1) {
             currentIdx++;
-            renderSoal(); // Load soal baru
-            // Timer jalan terus
+            renderSoal(); 
         } else {
-            // SELESAI
             clearInterval(timerInterval);
-            document.getElementById('quiz-screen').style.display = 'none'; // Sembunyikan quiz
+            document.getElementById('quiz-screen').style.display = 'none';
             showPage('p-score');
             
-            // Hitung Skor (Skala 1000)
             let maxScore = dataSoal.length * 20;
             let finalScore = Math.round((score / maxScore) * 1000);
             document.getElementById('final-score').innerText = finalScore;
-            
-            // Auto trigger AI (Opsional, atau user klik tombol sendiri)
-            // tanyaAI(); 
         }
     }
 
-    // --- AI MENTOR (SUDAH FIX) ---
+    // --- AI MENTOR ---
     async function tanyaAI() {
         const btn = document.getElementById('btn-analyze');
         const loading = document.getElementById('ai-loading');
         const resultBox = document.getElementById('ai-result');
         const skorAkhir = document.getElementById('final-score').innerText;
 
-        btn.style.display = 'none';
-        loading.style.display = 'block';
+        btn.style.display = 'none'; loading.style.display = 'block';
+        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang berpikir...</div>`;
 
-        // Animasi
-        loading.innerHTML = `
-            <div class="loader"></div>
-            <div class="loading-text">
-                🧠 AI sedang menganalisis performamu...<br>
-                <small style="color:#64748b; font-weight:normal;">Membandingkan dengan standar PTN Favorit...</small>
-            </div>
-        `;
-
-        let promptText = `
-        Kamu adalah Mentor UTBK SNBT.
-        DATA SISWA: Skor ${skorAkhir} (Skala 0-1000).
-        TUGAS:
-        1. Analisis peluang lolos ke PTN Favorit (UI/ITB/UGM) dengan skor segitu.
-        2. Analisis kesalahan dari riwayat ini:
-        `;
-
-        userHistory.forEach((h, i) => {
-            promptText += `Soal ${i+1}: ${h.soal.substring(0,50)}... -> Jawab: ${h.jawabanUser} (${h.isCorrect?'Benar':'Salah'})\n`;
-        });
-
-        promptText += `\n3. Beri saran belajar singkat.`;
+        let promptText = `Saya siswa UTBK. Skor Tryout: ${skorAkhir}/1000.\nAnalisis performa saya berdasarkan riwayat ini:\n`;
+        userHistory.forEach((h, i) => { promptText += `Soal ${i+1}: ${h.soal.substring(0,30)}... [Jawab: ${h.jawabanUser} | Status: ${h.isCorrect?'Benar':'Salah'}]\n`; });
+        promptText += `\nBerikan saran strategi belajar singkat & padat.`;
 
         try {
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY_GEMINI}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
             });
-
             const data = await res.json();
-            if (data.candidates && data.candidates.length > 0) {
-                loading.style.display = 'none';
-                resultBox.style.display = 'block';
-                resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
-            } else { throw new Error("No Data"); }
+            loading.style.display = 'none'; resultBox.style.display = 'block';
+            resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
         } catch (e) {
-            loading.style.display = 'none';
-            btn.style.display = 'block';
-            alert("⚠️ Server AI sibuk. Coba lagi nanti.");
+            loading.style.display = 'none'; btn.style.display = 'block';
+            alert("⚠️ Server AI sibuk.");
         }
     }
 </script>
