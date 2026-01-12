@@ -7,14 +7,17 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
+    
+    <script>
       window.MathJax = {
         tex: {
           inlineMath: [['$', '$'], ['\\(', '\\)']] 
+        },
+        startup: {
+            typeset: false // Kita render manual biar rapi
         }
       };
     </script>
-    
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     
@@ -38,53 +41,39 @@
         .btn-primary { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: 600; width: 100%; cursor: pointer; font-size: 1rem; margin-top: 10px; }
         .btn-ai { background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: white; margin-top: 15px; }
         
-        /* QUIZ */
-        .wacana-box { background: #f1f5f9; padding: 18px; border-radius: 12px; margin-bottom: 20px; line-height: 1.8; font-size: 0.95rem; border-left: 4px solid var(--accent); overflow-wrap: break-word; }
-        .soal-image { max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; display:block; }
-        .option-btn { width: 100%; padding: 16px; margin-bottom: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; text-align: left; cursor: pointer; display: flex; align-items: flex-start; }
-        .option-btn span { margin-right: 12px; font-weight: bold; color: var(--accent); min-width: 20px; flex-shrink: 0; }
+        /* QUIZ AREA */
+        #quiz-container { opacity: 0; transition: opacity 0.3s ease-in; } /* Efek Fade In */
         
+        .wacana-box { background: #f1f5f9; padding: 18px; border-radius: 12px; margin-bottom: 20px; line-height: 1.8; font-size: 0.95rem; border-left: 4px solid var(--accent); overflow-wrap: break-word; }
+        .soal-image { max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; display:none; }
+        
+        .option-btn { width: 100%; padding: 16px; margin-bottom: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; text-align: left; cursor: pointer; display: flex; align-items: flex-start; transition: all 0.2s; }
+        .option-btn:hover { border-color: var(--accent); background: #eff6ff; }
+        .option-btn span.label { margin-right: 12px; font-weight: bold; color: var(--accent); min-width: 20px; flex-shrink: 0; }
+        
+        /* HASIL JAWABAN */
         .correct { background: #ecfdf5 !important; border-color: #10b981 !important; color: #047857; }
         .wrong { background: #fef2f2 !important; border-color: #ef4444 !important; }
-        .feedback { margin-top: 20px; padding: 15px; border-radius: 12px; display: none; font-size: 0.95rem; }
         
+        /* FEEDBACK (CLUE & PEMBAHASAN) */
+        #feedback-area { margin-top: 20px; display: none; }
+        .fb-box { padding: 15px; border-radius: 12px; font-size: 0.95rem; margin-bottom: 10px; line-height: 1.6; }
         .fb-clue { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
-        .fb-correct { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
-        .fb-wrong { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-        
+        .fb-bahas { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+        /* AI RESULT */
         #ai-result { text-align: left; background: #fdf4ff; border: 1px solid #f0abfc; padding: 20px; border-radius: 12px; margin-top: 20px; display: none; font-size: 0.9rem; line-height: 1.6; }
 
         /* MENU GRID */
         #menu-list { display: grid; gap: 15px; }
         .btn-menu { background: white; border: 2px solid #e2e8f0; color: var(--primary); padding: 20px; border-radius: 16px; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .btn-menu:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }/* ... kode css lama ... */
+        .btn-menu:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
-        /* 👇 ANIMASI LOADING & TEKS BERKEDIP 👇 */
-        .loader {
-            border: 5px solid #f3f3f3; /* Abu-abu pudar */
-            border-top: 5px solid var(--accent); /* Biru Utama */
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: putar 1s linear infinite;
-            margin: 20px auto;
-        }
+        /* LOADING ANIMATION */
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: putar 1s linear infinite; margin: 20px auto; }
         @keyframes putar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .loading-text {
-            color: var(--accent);
-            font-weight: 600;
-            text-align: center;
-            animation: kedip 1.5s infinite;
-        }
+        .loading-text { color: var(--accent); font-weight: 600; text-align: center; animation: kedip 1.5s infinite; }
         @keyframes kedip { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-
-#quiz-container {
-            opacity: 0;
-            transition: opacity 0.3s ease-in;
-        }
-
-
     </style>
 </head>
 <body>
@@ -110,12 +99,29 @@
 
     <div id="p-quiz" class="page">
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
-            <span id="progress" style="font-weight: 600; color: #64748b;">Soal 1</span>
+            <span id="soal-idx" style="font-weight: 600; color: #64748b;">Soal 1</span>
             <span id="timer" style="background: #fee2e2; color: #ef4444; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">00:00</span>
         </div>
-        <div id="q-area"></div>
-        <div id="feedback" class="feedback"></div>
-        <button id="btn-next" class="btn-primary" style="margin-top:20px; display:none;" onclick="nextQuestion()">LANJUT ➔</button>
+        
+        <div id="quiz-container">
+            <div id="wacana-text" class="wacana-box" style="display:none;"></div>
+            <div id="soal-img-container" style="display:none; text-align:center;">
+                <img id="soal-img" class="soal-image" alt="Soal Gambar">
+            </div>
+            <div id="pertanyaan-text" style="font-weight:bold; margin-bottom:20px; font-size:1.1rem;"></div>
+            
+            <div id="options-container">
+                <button class="option-btn" id="opt-A" onclick="cekJawaban('A')"></button>
+                <button class="option-btn" id="opt-B" onclick="cekJawaban('B')"></button>
+                <button class="option-btn" id="opt-C" onclick="cekJawaban('C')"></button>
+                <button class="option-btn" id="opt-D" onclick="cekJawaban('D')"></button>
+                <button class="option-btn" id="opt-E" onclick="cekJawaban('E')"></button>
+            </div>
+
+            <div id="feedback-area"></div>
+            
+            <button id="btn-next" class="btn-primary" style="margin-top:20px; display:none;" onclick="nextQuestion()">LANJUT KE SOAL BERIKUTNYA ➔</button>
+        </div>
     </div>
 
     <div id="p-score" class="page" style="text-align: center;">
@@ -135,39 +141,36 @@
 </div>
 
 <script>
-    // ================= CONFIG =================
+    // ================= CONFIGURASI UTAMA =================
     const PASSWORD = "LULUS-UTBK";
-    
-    // ✅ KUNCI YANG SUDAH TERBUKTI VALID
     const API_KEY_GEMINI = "AIzaSyCWkYkUsyxhvF0w8g3poZYmPueDidgrLek"; 
+    const JUMLAH_SOAL_MAX = 15; 
 
-    // 👇 FITUR BARU: BATASI JUMLAH SOAL 👇
-    const JUMLAH_SOAL_MAX = 15; // Cuma 15 soal per sesi (meski di CSV ada 100)
-    
-    // ======================================================
-    // 👇👇👇 UPDATE LINK CSV KAMU DI SINI 👇👇👇
     const DAFTAR_PAKET = {
         "🧠 Penalaran Umum": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTTWXZoyNTnAX-0uTm6eb_zDNk20GGFjuWQtO2UBz9b-IZSF1y4Wc_ZXJGE7zUI_394LnYFJNHWKs5a/pub?gid=0&single=true&output=csv",
-        "📐 Pengetahuan Kuantitatif": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS2QQqQK2YHMHFYDfDSCWEYieBobUy0Xh21S13BIU0C1cKG4xvSkYuAdJSLNUs1LBdVm0S5dr1r_p0X/pub?gid=0&single=true&output=csv", // Pastikan link ini mengarah ke Sheet Kuantitatif
+        "📐 Pengetahuan Kuantitatif": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS2QQqQK2YHMHFYDfDSCWEYieBobUy0Xh21S13BIU0C1cKG4xvSkYuAdJSLNUs1LBdVm0S5dr1r_p0X/pub?gid=0&single=true&output=csv",
         "📖 Literasi Bahasa Inggris": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS2vVvZZcN8doZ-hrB-fak6KhP0L69d0T-1MDlToCXeNF3RknJRoiUJDeATeeo68tya2N-VOKQNwK4o/pub?gid=0&single=true&output=csv"
     };
-    // ======================================================
 
-    let dataSoal = [], userHistory = [], currentIdx = 0, score = 0, nyawa = 1, timerInterval, seconds = 0;
+    let dataSoal = [], userHistory = [], currentIdx = 0, score = 0, timerInterval, seconds = 0;
 
+    // --- NAVIGASI HALAMAN ---
     function showPage(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
+    // --- LOGIN ---
     function cekToken() {
         if(document.getElementById('token-input').value.toUpperCase().trim() === PASSWORD) {
             renderMenu(); showPage('p-menu');
         } else {
-            document.getElementById('error-msg').style.display = 'block'; document.getElementById('error-msg').innerText = "Kode Salah!";
+            document.getElementById('error-msg').style.display = 'block'; 
+            document.getElementById('error-msg').innerText = "Kode Salah!";
         }
     }
 
+    // --- RENDER MENU ---
     function renderMenu() {
         const box = document.getElementById('menu-list'); box.innerHTML = '';
         for (const [nama, link] of Object.entries(DAFTAR_PAKET)) {
@@ -175,9 +178,8 @@
         }
     }
 
-function loadSoal(link) {
-        if(link.includes("MASUKKAN_LINK")) return alert("Link soal belum diisi di kodingan!");
-        
+    // --- LOAD SOAL (DENGAN PERBAIKAN CSV) ---
+    function loadSoal(link) {
         const btn = event.currentTarget;
         const oriText = btn.innerHTML;
         btn.innerHTML = "⏳ Mengacak Soal...";
@@ -185,25 +187,27 @@ function loadSoal(link) {
         Papa.parse(link, { 
             download: true, 
             header: true, 
-            delimiter: ",", // <--- INI OBATNYA! Memaksa pemisah harus koma.
+            delimiter: ",", // WAJIB: Biar matematika '|' gak error
             complete: (res) => {
-                // 1. Ambil semua soal mentah dari CSV
                 let rawData = res.data.filter(r => r.Wacana || r.Pertanyaan);
-                
-                if(!rawData.length) { btn.innerHTML = oriText; return alert("Soal Kosong!"); }
+                if(!rawData.length) { btn.innerHTML = oriText; return alert("Soal Kosong/Gagal Load!"); }
 
-                // 2. FITUR ACAK (SHUFFLE)
+                // Acak & Batasi
                 rawData.sort(() => 0.5 - Math.random());
-
-                // 3. FITUR BATASI (LIMIT)
                 dataSoal = rawData.slice(0, JUMLAH_SOAL_MAX);
 
                 currentIdx = 0; score = 0; seconds = 0; userHistory = [];
                 startQuiz();
-            }, error: () => { btn.innerHTML = oriText; alert("Gagal mengambil soal. Cek Link!"); }});
+            }, 
+            error: () => { btn.innerHTML = oriText; alert("Gagal koneksi ke Google Sheet!"); }
+        });
     }
+
     function startQuiz() {
-        showPage('p-quiz'); renderQuestion();
+        showPage('p-quiz'); 
+        renderSoal(); // Panggil fungsi render yang baru
+        
+        // Reset Timer
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             seconds++; let m = Math.floor(seconds/60), s = seconds%60;
@@ -211,70 +215,146 @@ function loadSoal(link) {
         }, 1000);
     }
 
-    function renderQuestion() {
-        const item = dataSoal[currentIdx]; nyawa = 1;
-        document.getElementById('progress').innerText = `Soal ${currentIdx+1}/${dataSoal.length}`;
-        document.getElementById('feedback').style.display = 'none';
+    // --- RENDER SOAL (VERSI LENGKAP & MATHJAX) ---
+    function renderSoal() {
+        // 1. Sembunyikan dulu (Efek Kedip)
+        const container = document.getElementById('quiz-container');
+        container.style.opacity = '0';
+
+        if (!dataSoal || dataSoal.length === 0) return;
+        const soal = dataSoal[currentIdx];
+
+        // 2. Reset UI
+        document.getElementById('feedback-area').style.display = 'none';
         document.getElementById('btn-next').style.display = 'none';
-        
-        let html = item.Gambar ? `<img src="${item.Gambar}" class="soal-image">` : '';
-        if(item.Wacana) html += `<div class="wacana-box">${item.Wacana}</div>`;
-        html += `<div style="font-weight:bold; margin-bottom:15px; font-size:1.1rem;">${item.Pertanyaan}</div>`;
-        
-        ['A','B','C','D','E'].forEach((label, i) => {
-            let txt = item[`Opsi_${label}`];
-            if(txt) html += `<button class="option-btn" id="opt-${i}" onclick="jawab(${i})"><span>${label}.</span> <div>${txt}</div></button>`;
+        document.getElementById('soal-idx').innerText = `Soal ${currentIdx + 1}/${dataSoal.length}`;
+
+        // 3. Isi Konten
+        const wacanaDiv = document.getElementById('wacana-text');
+        if(soal.Wacana) { wacanaDiv.style.display="block"; wacanaDiv.innerHTML = marked.parse(soal.Wacana); }
+        else { wacanaDiv.style.display="none"; }
+
+        const imgDiv = document.getElementById('soal-img-container');
+        if(soal.Gambar && soal.Gambar.trim() !== "") { 
+            imgDiv.style.display="block"; 
+            document.getElementById('soal-img').src = "img/" + soal.Gambar; 
+        } else { imgDiv.style.display="none"; }
+
+        document.getElementById('pertanyaan-text').innerHTML = marked.parse(soal.Pertanyaan);
+
+        // 4. Isi Opsi
+        ['A','B','C','D','E'].forEach(opt => {
+            const btn = document.getElementById(`opt-${opt}`);
+            const textKey = `Opsi_${opt}`;
+            
+            // Reset Tombol
+            btn.className = "option-btn"; // Reset style
+            btn.disabled = false;
+            
+            // Isi teks (hapus tag p bawaan marked)
+            let rawTxt = soal[textKey] || "";
+            let cleanText = marked.parse(rawTxt).replace(/<p>|<\/p>/g, "");
+            
+            btn.innerHTML = `<span class="label">${opt}.</span> <div style="flex:1;">${cleanText}</div>`;
         });
-        document.getElementById('q-area').innerHTML = html;
-        if(window.MathJax) MathJax.typesetPromise();
-    }
 
-    function jawab(pilih) {
-        if(document.getElementById('btn-next').style.display === 'block') return;
-        const item = dataSoal[currentIdx]; const kunci = parseInt(item.Kunci); const fb = document.getElementById('feedback');
-        
-        if(nyawa === 1) {
-            userHistory.push({ soal: item.Pertanyaan, jawabanUser: item[`Opsi_${String.fromCharCode(65+pilih)}`], kunci: item[`Opsi_${String.fromCharCode(65+kunci)}`], isCorrect: (pilih === kunci) });
-        }
-
-        if(pilih === kunci) {
-            document.getElementById(`opt-${pilih}`).classList.add('correct');
-            score += (nyawa === 1 ? 20 : 10);
-            fb.className = "feedback fb-correct"; fb.innerHTML = `✅ <b>Benar!</b><br>${item.Pembahasan}`; fb.style.display = 'block'; document.getElementById('btn-next').style.display = 'block';
+        // 5. Render MathJax lalu munculkan (Fade In)
+        if (window.MathJax) {
+            MathJax.typesetPromise([container]).then(() => {
+                container.style.opacity = '1';
+            }).catch(() => container.style.opacity = '1');
         } else {
-            if(nyawa === 1) {
-                document.getElementById(`opt-${pilih}`).classList.add('wrong');
-                fb.className = "feedback fb-clue";
-                fb.innerHTML = `💡 <b>Belum Tepat.</b><br>${item.Clue || "Cek pertanyaan lagi!"}<br><i>Silakan pilih jawaban lain!</i>`;
-                fb.style.display = 'block'; nyawa = 2;
-            } else {
-                document.getElementById(`opt-${pilih}`).classList.add('wrong'); document.getElementById(`opt-${kunci}`).classList.add('correct');
-                fb.className = "feedback fb-wrong"; fb.innerHTML = `❌ <b>Jawaban: ${String.fromCharCode(65+kunci)}</b><br>${item.Pembahasan}`; fb.style.display = 'block'; document.getElementById('btn-next').style.display = 'block';
-            }
+            container.style.opacity = '1';
         }
-        if(window.MathJax) MathJax.typesetPromise();
     }
 
+    // --- CEK JAWABAN (DENGAN CLUE & PEMBAHASAN) ---
+    function cekJawaban(pilihanUser) {
+        const soal = dataSoal[currentIdx];
+        const kunci = parseInt(soal.Kunci); // Pastikan angka
+        const mapPilihan = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4};
+        const idxUser = mapPilihan[pilihanUser];
+        
+        const btnUser = document.getElementById(`opt-${pilihanUser}`);
+        const feedbackArea = document.getElementById('feedback-area');
+
+        // Kunci semua tombol
+        ['A','B','C','D','E'].forEach(opt => document.getElementById(`opt-${opt}`).disabled = true);
+
+        // Cek Benar/Salah
+        let isCorrect = (idxUser === kunci);
+        if(isCorrect) {
+            btnUser.classList.add('correct');
+            score += 20; 
+        } else {
+            btnUser.classList.add('wrong');
+            // Kasih tau yang benar
+            const hurufKunci = ['A','B','C','D','E'][kunci];
+            document.getElementById(`opt-${hurufKunci}`).classList.add('correct');
+        }
+
+        // Simpan History
+        userHistory.push({
+            soal: soal.Pertanyaan,
+            jawabanUser: pilihanUser,
+            kunci: ['A','B','C','D','E'][kunci],
+            isCorrect: isCorrect
+        });
+
+        // TAMPILKAN FEEDBACK
+        feedbackArea.style.display = 'block';
+        let htmlContent = "";
+        
+        // Clue (Kalau ada)
+        if(soal.Clue) {
+            htmlContent += `<div class="fb-box fb-clue">💡 <b>Clue:</b> ${marked.parse(soal.Clue)}</div>`;
+        }
+        // Pembahasan
+        let bahasText = soal.Pembahasan ? marked.parse(soal.Pembahasan) : "Pembahasan tidak tersedia.";
+        htmlContent += `<div class="fb-box fb-bahas">📘 <b>Pembahasan:</b><br>${bahasText}</div>`;
+        
+        feedbackArea.innerHTML = htmlContent;
+
+        // Render ulang Matematika di bagian feedback
+        if(window.MathJax) MathJax.typesetPromise([feedbackArea]);
+
+        // Munculkan Tombol Lanjut
+        document.getElementById('btn-next').style.display = 'block';
+    }
+
+    // --- LANJUT SOAL ---
     function nextQuestion() {
-        if(currentIdx < dataSoal.length-1) { currentIdx++; renderSoal(); startTimer() } 
-        else { clearInterval(timerInterval); showPage('p-score'); document.getElementById('final-score').innerText = Math.round((score / (dataSoal.length*20)) * 1000); }
+        if(currentIdx < dataSoal.length - 1) {
+            currentIdx++;
+            renderSoal(); // Load soal baru
+            // Timer jalan terus
+        } else {
+            // SELESAI
+            clearInterval(timerInterval);
+            document.getElementById('quiz-screen').style.display = 'none'; // Sembunyikan quiz
+            showPage('p-score');
+            
+            // Hitung Skor (Skala 1000)
+            let maxScore = dataSoal.length * 20;
+            let finalScore = Math.round((score / maxScore) * 1000);
+            document.getElementById('final-score').innerText = finalScore;
+            
+            // Auto trigger AI (Opsional, atau user klik tombol sendiri)
+            // tanyaAI(); 
+        }
     }
 
-    // --- AI MENTOR (PASTI JALAN: SUDAH DISESUAIKAN DENGAN AKUNMU) ---
-async function tanyaAI() {
+    // --- AI MENTOR (SUDAH FIX) ---
+    async function tanyaAI() {
         const btn = document.getElementById('btn-analyze');
         const loading = document.getElementById('ai-loading');
         const resultBox = document.getElementById('ai-result');
-        
-        // Ambil skor akhir yang tampil di layar
         const skorAkhir = document.getElementById('final-score').innerText;
-        
-        if(!API_KEY_GEMINI || API_KEY_GEMINI.includes("PASTE")) { alert("Key Error"); return; }
 
         btn.style.display = 'none';
         loading.style.display = 'block';
 
-        // 1. TAMPILKAN ANIMASI LOADING KEREN
+        // Animasi
         loading.innerHTML = `
             <div class="loader"></div>
             <div class="loading-text">
@@ -283,102 +363,39 @@ async function tanyaAI() {
             </div>
         `;
 
-        // 2. PROMPT CANGGIH DENGAN DATA VALID
         let promptText = `
-        Kamu adalah Mentor UTBK SNBT yang cerdas, suportif, dan berbasis data.
-        
-        DATA SKOR SISWA:
-        - Skor Latihan: ${skorAkhir} (Skala 0-1000)
-        
-        ACUAN DATA PASSING GRADE UTBK (Gunakan ini sebagai patokan analisis):
-        - Skor > 700: ZONA AMAN untuk PTN Top Tier (UI, ITB, UGM) terutama kedokteran/teknik.
-        - Skor 650 - 700: KOMPETITIF untuk PTN Favorit (Unpad, Undip, ITS, UB) jurusan populer.
-        - Skor 550 - 649: CUKUP untuk PTN Menengah atau jurusan yang tidak terlalu ketat.
-        - Skor < 550: PERLU PERBAIKAN BESAR untuk menembus persaingan SNBT.
-
-        TUGASMU:
-        1. Analisis posisi siswa ini berdasarkan skor ${skorAkhir} dan acuan data di atas. Jujurlah apakah nilainya sudah aman atau belum.
-        2. Bedah kesalahannya dari riwayat jawaban di bawah ini.
-        3. Beri saran strategi belajar spesifik agar bisa naik ke level 700+.
-
-        RIWAYAT JAWABAN SISWA:
+        Kamu adalah Mentor UTBK SNBT.
+        DATA SISWA: Skor ${skorAkhir} (Skala 0-1000).
+        TUGAS:
+        1. Analisis peluang lolos ke PTN Favorit (UI/ITB/UGM) dengan skor segitu.
+        2. Analisis kesalahan dari riwayat ini:
         `;
 
-        // Masukkan history jawaban siswa ke prompt
         userHistory.forEach((h, i) => {
-            promptText += `Soal ${i+1}: ${h.soal} \n   -> Jawaban Siswa: ${h.jawabanUser} \n   -> Kunci: ${h.kunci} \n   -> Status: ${h.isCorrect ? "BENAR ✅" : "SALAH ❌"}\n\n`;
+            promptText += `Soal ${i+1}: ${h.soal.substring(0,50)}... -> Jawab: ${h.jawabanUser} (${h.isCorrect?'Benar':'Salah'})\n`;
         });
 
-        const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
-        let sukses = false;
+        promptText += `\n3. Beri saran belajar singkat.`;
 
-        for (const model of models) {
-            try {
-                // Jangan ubah teks loading di sini biar animasinya gak hilang
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY_GEMINI}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-                });
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY_GEMINI}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+            });
 
-                if (!res.ok) throw new Error("Gagal");
-                const data = await res.json();
-                
-                if (data.candidates && data.candidates.length > 0) {
-                    loading.style.display = 'none';
-                    resultBox.style.display = 'block';
-                    resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
-                    sukses = true;
-                    break;
-                }
-            } catch (e) { console.warn(`Gagal model ${model}`); }
-        }
-
-        if (!sukses) {
+            const data = await res.json();
+            if (data.candidates && data.candidates.length > 0) {
+                loading.style.display = 'none';
+                resultBox.style.display = 'block';
+                resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
+            } else { throw new Error("No Data"); }
+        } catch (e) {
             loading.style.display = 'none';
             btn.style.display = 'block';
-            alert("⚠️ Maaf, server AI sedang sibuk. Silakan coba tekan tombol lagi dalam 1 menit.");
+            alert("⚠️ Server AI sibuk. Coba lagi nanti.");
         }
     }
-
-// 👇👇👇 INI FUNGSI BARU, TARUH DI PALING BAWAH JS 👇👇👇
-    function renderSoal() {
-        // 1. Efek kedip (sembunyikan dulu)
-        const container = document.getElementById('quiz-container');
-        if(container) container.style.opacity = '0';
-
-        // 2. Ambil data soal berdasarkan index saat ini
-        if (!dataSoal || dataSoal.length === 0) return;
-// 2. PANGGIL FUNGSI BARU KITA
-    renderSoal();  //            
-            // Reset tampilan tombol
-            btn.className = "option-btn w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition-all mb-3 relative group";
-            btn.disabled = false;
-            btn.onclick = () => cekJawaban(opt); // Pasang fungsi klik
-            
-            // Isi teks opsi
-            let cleanText = marked.parse(soal[textKey] || "").replace(/<p>|<\/p>/g, "");
-            
-            btn.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <span class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">${opt}.</span>
-                    <span class="flex-1">${cleanText}</span>
-                </div>
-            `;
-        });
-
-        // 8. Panggil MathJax untuk merapikan rumus
-        if (window.MathJax) {
-            MathJax.typesetPromise([container]).then(() => {
-                if(container) container.style.opacity = '1'; // Munculkan lagi
-            }).catch(() => {
-                if(container) container.style.opacity = '1';
-            });
-        } else {
-            if(container) container.style.opacity = '1';
-        }
-    }
-
 </script>
 
 </body>
