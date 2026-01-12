@@ -152,16 +152,13 @@
         "📖 Literasi Bahasa Inggris": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS2vVvZZcN8doZ-hrB-fak6KhP0L69d0T-1MDlToCXeNF3RknJRoiUJDeATeeo68tya2N-VOKQNwK4o/pub?gid=0&single=true&output=csv"
     };
 
-    // Tambahkan variabel 'nyawa' di sini
     let dataSoal = [], userHistory = [], currentIdx = 0, score = 0, timerInterval, seconds = 0, nyawa = 1;
 
-    // --- NAVIGASI HALAMAN ---
     function showPage(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
-    // --- LOGIN ---
     function cekToken() {
         if(document.getElementById('token-input').value.toUpperCase().trim() === PASSWORD) {
             renderMenu(); showPage('p-menu');
@@ -171,7 +168,6 @@
         }
     }
 
-    // --- RENDER MENU ---
     function renderMenu() {
         const box = document.getElementById('menu-list'); box.innerHTML = '';
         for (const [nama, link] of Object.entries(DAFTAR_PAKET)) {
@@ -179,7 +175,6 @@
         }
     }
 
-    // --- LOAD SOAL ---
     function loadSoal(link) {
         const btn = event.currentTarget;
         const oriText = btn.innerHTML;
@@ -209,22 +204,18 @@
         }, 1000);
     }
 
-    // --- RENDER SOAL (RESET NYAWA) ---
     function renderSoal() {
-        nyawa = 1; // 👈 Reset Nyawa setiap ganti soal
-        
+        nyawa = 1; 
         const container = document.getElementById('quiz-container');
-        container.style.opacity = '0'; // Efek kedip
+        container.style.opacity = '0';
 
         if (!dataSoal || dataSoal.length === 0) return;
         const soal = dataSoal[currentIdx];
 
-        // Reset UI
         document.getElementById('feedback-area').style.display = 'none';
         document.getElementById('btn-next').style.display = 'none';
         document.getElementById('soal-idx').innerText = `Soal ${currentIdx + 1}/${dataSoal.length}`;
 
-        // Isi Konten
         const wacanaDiv = document.getElementById('wacana-text');
         if(soal.Wacana) { wacanaDiv.style.display="block"; wacanaDiv.innerHTML = marked.parse(soal.Wacana); }
         else { wacanaDiv.style.display="none"; }
@@ -237,10 +228,8 @@
 
         document.getElementById('pertanyaan-text').innerHTML = marked.parse(soal.Pertanyaan);
 
-        // Isi Opsi
         ['A','B','C','D','E'].forEach(opt => {
             const btn = document.getElementById(`opt-${opt}`);
-            // Reset Tombol Total
             btn.className = "option-btn"; 
             btn.disabled = false; 
             btn.style.opacity = "1";
@@ -256,7 +245,6 @@
         } else { container.style.opacity = '1'; }
     }
 
-    // --- CEK JAWABAN (LOGIKA NYAWA DIPERBAIKI) ---
     function cekJawaban(pilihanUser) {
         const soal = dataSoal[currentIdx];
         const kunci = parseInt(soal.Kunci); 
@@ -267,28 +255,18 @@
 
         let isCorrect = (idxUser === kunci);
 
-        // SKENARIO 1: BENAR
         if(isCorrect) {
             btnUser.classList.add('correct');
-            // Skor: Kalau nyawa masih 1 dapat 20, kalau udah nyawa 2 dapat 10
             score += (nyawa === 1 ? 20 : 10);
-            
-            // Kunci SEMUA tombol
             ['A','B','C','D','E'].forEach(opt => document.getElementById(`opt-${opt}`).disabled = true);
-            
-            // Munculkan PEMBAHASAN
             tampilkanFeedback(true, soal);
-        } 
-        // SKENARIO 2: SALAH
-        else {
+        } else {
             btnUser.classList.add('wrong');
-            btnUser.disabled = true; // Kunci tombol yang salah ini saja
+            btnUser.disabled = true; 
             
             if(nyawa === 1) {
-                // SALAH PERTAMA -> MUNCUL CLUE
-                nyawa = 2; // Kurangi nyawa
+                nyawa = 2; 
                 feedbackArea.style.display = 'block';
-                // Cek ada clue gak?
                 let pesan = soal.Clue ? 
                     `<div class="fb-box fb-clue">💡 <b>Belum Tepat.</b><br>${marked.parse(soal.Clue)}<br><i>Coba pilih jawaban lain!</i></div>` :
                     `<div class="fb-box fb-clue">💡 <b>Belum Tepat.</b><br>Coba pikirkan lagi dan pilih jawaban lain!</div>`;
@@ -296,23 +274,14 @@
                 feedbackArea.innerHTML = pesan;
                 if(window.MathJax) MathJax.typesetPromise([feedbackArea]);
             } else {
-                // SALAH KEDUA -> GAME OVER -> MUNCUL PEMBAHASAN
-                // Kasih tau kunci jawaban
                 const hurufKunci = ['A','B','C','D','E'][kunci];
                 document.getElementById(`opt-${hurufKunci}`).classList.add('correct');
-                
-                // Kunci SEMUA tombol
                 ['A','B','C','D','E'].forEach(opt => document.getElementById(`opt-${opt}`).disabled = true);
-                
-                // Munculkan Pembahasan
                 tampilkanFeedback(false, soal);
             }
         }
         
-        // Simpan History (Hanya simpan kalau attempt terakhir atau benar)
-        // Biar history gak dobel-dobel
         if(isCorrect || nyawa === 2) {
-             // Cek biar gak duplikat di array
              const lastEntry = userHistory[userHistory.length - 1];
              if(!lastEntry || lastEntry.soal !== soal.Pertanyaan) {
                 userHistory.push({
@@ -325,7 +294,6 @@
         }
     }
 
-    // Fungsi Helper biar rapi
     function tampilkanFeedback(isBenar, soal) {
         const feedbackArea = document.getElementById('feedback-area');
         feedbackArea.style.display = 'block';
@@ -341,18 +309,17 @@
         `;
         
         if(window.MathJax) MathJax.typesetPromise([feedbackArea]);
-        document.getElementById('btn-next').style.display = 'block'; // Muncul tombol lanjut
+        document.getElementById('btn-next').style.display = 'block'; 
     }
 
-    // --- LANJUT SOAL ---
     function nextQuestion() {
         if(currentIdx < dataSoal.length - 1) {
             currentIdx++;
             renderSoal(); 
         } else {
+            // ✅ SUDAH DIPERBAIKI: Panggil halaman skor yang benar
             clearInterval(timerInterval);
-            document.getElementById('quiz-screen').style.display = 'none';
-            showPage('p-score');
+            showPage('p-score'); // Langsung pindah ke halaman skor (ID: p-score)
             
             let maxScore = dataSoal.length * 20;
             let finalScore = Math.round((score / maxScore) * 1000);
@@ -360,7 +327,6 @@
         }
     }
 
-    // --- AI MENTOR ---
     async function tanyaAI() {
         const btn = document.getElementById('btn-analyze');
         const loading = document.getElementById('ai-loading');
