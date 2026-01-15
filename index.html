@@ -333,51 +333,68 @@ async function tanyaAI() {
         const resultBox = document.getElementById('ai-result');
         const skorAkhir = document.getElementById('final-score').innerText;
 
-        // Reset tampilan
         btn.style.display = 'none'; 
         loading.style.display = 'block';
         resultBox.style.display = 'none';
-        
-        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang menganalisis...<br><small>Hampir berhasil!</small></div>`;
 
-        let promptText = `Saya siswa UTBK. Skor Tryout: ${skorAkhir}/1000.\nAnalisis performa saya berdasarkan riwayat ini:\n`;
-        userHistory.forEach((h, i) => { 
-            promptText += `Soal ${i+1}: Status ${h.isCorrect?'Benar':'Salah'}\n`; 
-        });
-        promptText += `\nBerikan saran strategi belajar singkat, padat, dan menyemangati.`;
+        // Daftar model yang akan dicoba satu per satu
+        const models = [
+            "gemini-1.5-flash",        // Pilihan 1: Flash Hemat & Cepat
+            "gemini-1.5-pro",          // Pilihan 2: Pro Cerdas
+            "gemini-1.0-pro",          // Pilihan 3: Klasik Stabil
+            "gemini-2.0-flash-exp"     // Pilihan 4: Eksperimental Terbaru
+        ];
 
-        try {
-            // 👇 PERUBAHAN DI SINI: Kita pakai 'gemini-pro' yang lebih stabil
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY_GEMINI}`;
-            
-            const res = await fetch(url, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    contents: [{ parts: [{ text: promptText }] }] 
-                })
-            });
+        let sukses = false;
+        let pesanErrorTerakhir = "";
 
-            const data = await res.json();
+        // Loop untuk mencoba setiap model
+        for (const model of models) {
+            try {
+                // Update status loading biar user tau kita lagi usaha
+                loading.innerHTML = `<div class="loader"></div><div class="loading-text">🔄 Mencoba model <b>${model}</b>...</div>`;
+                
+                let promptText = `Saya siswa UTBK. Skor: ${skorAkhir}/1000. Analisis riwayat singkat ini:\n`;
+                userHistory.forEach((h, i) => { 
+                    promptText += `Soal ${i+1}: ${h.isCorrect?'Benar':'Salah'}\n`; 
+                });
+                promptText += `\nBeri saran strategi belajar singkat padat.`;
 
-            if (!res.ok) {
-                let pesanErrorGoogle = data.error ? data.error.message : JSON.stringify(data);
-                throw new Error(pesanErrorGoogle);
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY_GEMINI}`;
+                
+                const res = await fetch(url, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error ? data.error.message : "Gagal");
+                }
+
+                if (data.candidates && data.candidates.length > 0) {
+                    // BERHASIL! Tampilkan hasil
+                    loading.style.display = 'none'; 
+                    resultBox.style.display = 'block';
+                    resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
+                    sukses = true;
+                    break; // Keluar dari loop karena sudah berhasil
+                }
+                
+            } catch (e) {
+                console.warn(`Gagal pakai ${model}:`, e);
+                pesanErrorTerakhir = e.message;
+                // Lanjut ke model berikutnya di daftar...
             }
+        }
 
-            loading.style.display = 'none'; 
-            resultBox.style.display = 'block';
-            
-            if (data.candidates && data.candidates.length > 0) {
-                resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
-            } else {
-                throw new Error("AI tidak memberikan jawaban.");
-            }
-            
-        } catch (e) {
+        // Kalau sudah coba semua model tapi masih gagal juga
+        if (!sukses) {
             loading.style.display = 'none'; 
             btn.style.display = 'block';
-            alert("❌ GAGAL: " + e.message); 
+            alert("❌ MENYERAH: Semua model AI menolak.\nError terakhir: " + pesanErrorTerakhir);
         }
     }
 </script>
