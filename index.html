@@ -338,20 +338,17 @@ async function tanyaAI() {
         loading.style.display = 'block';
         resultBox.style.display = 'none';
         
-        // Indikator Loading
-        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🔍 Menghubungi Google...<br><small>Mohon tunggu...</small></div>`;
+        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang menganalisis...<br><small>Hampir berhasil!</small></div>`;
 
-        // 1. Siapkan Prompt
         let promptText = `Saya siswa UTBK. Skor Tryout: ${skorAkhir}/1000.\nAnalisis performa saya berdasarkan riwayat ini:\n`;
-        // Kita persingkat history biar hemat token dan mengurangi risiko error parsing
         userHistory.forEach((h, i) => { 
             promptText += `Soal ${i+1}: Status ${h.isCorrect?'Benar':'Salah'}\n`; 
         });
         promptText += `\nBerikan saran strategi belajar singkat, padat, dan menyemangati.`;
 
         try {
-            // 2. Tembak API Google
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY_GEMINI}`;
+            // 👇 PERUBAHAN DI SINI: Kita pakai 'gemini-pro' yang lebih stabil
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY_GEMINI}`;
             
             const res = await fetch(url, {
                 method: 'POST', 
@@ -363,37 +360,24 @@ async function tanyaAI() {
 
             const data = await res.json();
 
-            // 3. CEK ERROR DARI GOOGLE (INI KUNCINYA)
             if (!res.ok) {
-                // Ambil pesan error spesifik dari respon JSON Google
-                let pesanErrorGoogle = "Unknown Error";
-                if (data.error && data.error.message) {
-                    pesanErrorGoogle = data.error.message;
-                } else {
-                    pesanErrorGoogle = JSON.stringify(data);
-                }
+                let pesanErrorGoogle = data.error ? data.error.message : JSON.stringify(data);
                 throw new Error(pesanErrorGoogle);
             }
 
-            // 4. Jika Sukses
             loading.style.display = 'none'; 
             resultBox.style.display = 'block';
             
-            // Cek apakah ada kandidat jawaban
             if (data.candidates && data.candidates.length > 0) {
                 resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
             } else {
-                throw new Error("AI tidak memberikan jawaban (Candidates Empty).");
+                throw new Error("AI tidak memberikan jawaban.");
             }
             
         } catch (e) {
-            // 5. TAMPILKAN ERROR APA ADANYA
             loading.style.display = 'none'; 
             btn.style.display = 'block';
-            
-            // Alert ini akan berisi PESAN ASLI dari Google
             alert("❌ GAGAL: " + e.message); 
-            console.error("Detail Error:", e);
         }
     }
 </script>
