@@ -337,18 +337,16 @@ async function tanyaAI() {
         loading.style.display = 'block';
         resultBox.style.display = 'none';
 
-        // Kita pakai SATU model saja yang paling stabil untuk akun gratisan
-        const model = "gemini-1.5-flash"; 
+        // 👇 KITA PAKAI MODEL 2.0 (KARENA INI YANG TERBUKTI NYAMBUNG DI SCREENSHOT TADI)
+        const model = "gemini-2.0-flash-exp"; 
 
         loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang menganalisis...<br><small>Model: ${model}</small></div>`;
 
-        // Prompt kita persingkat biar tidak membebani server
-        let promptText = `Saya siswa UTBK. Skor: ${skorAkhir}/1000. Analisis riwayat singkat ini:\n`;
+        let promptText = `Saya siswa UTBK. Skor: ${skorAkhir}/1000. Analisis performa saya:\n`;
         userHistory.forEach((h, i) => { 
-            // Cuma kirim status Benar/Salah biar hemat token
             promptText += `Soal ${i+1}: ${h.isCorrect?'Benar':'Salah'}\n`; 
         });
-        promptText += `\nBeri saran strategi belajar singkat padat.`;
+        promptText += `\nBeri saran belajar singkat padat.`;
 
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY_GEMINI}`;
@@ -361,13 +359,17 @@ async function tanyaAI() {
 
             const data = await res.json();
 
-            // 👇 MENANGANI SERVER SIBUK (RATE LIMIT)
+            // Cek Error Kuota
             if (res.status === 429) {
-                throw new Error("🚦 Server AI sedang sibuk/penuh. Mohon tunggu 1-2 menit, lalu coba klik lagi.");
+                throw new Error("⏳ Server Penuh. Tunggu 1 menit lalu coba lagi.");
             }
 
             if (!res.ok) {
-                let pesan = data.error ? data.error.message : "Gagal terhubung ke Google";
+                let pesan = data.error ? data.error.message : "Gagal";
+                if (pesan.includes("Quota") || pesan.includes("limit")) {
+                    throw new Error("⏳ Bensin habis. Tunggu 2 menit biar isi ulang otomatis.");
+                }
+                // Kalau error "Not Found" lagi, berarti Google emang lagi error massal
                 throw new Error(pesan);
             }
 
@@ -376,21 +378,13 @@ async function tanyaAI() {
                 resultBox.style.display = 'block';
                 resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
             } else {
-                throw new Error("AI tidak memberikan jawaban (Respon kosong).");
+                throw new Error("AI tidak menjawab.");
             }
             
         } catch (e) {
             loading.style.display = 'none'; 
             btn.style.display = 'block';
-            
-            // Tampilkan pesan error yang manusiawi
-            let msg = e.message;
-            // Kalau errornya soal kuota/429, kita perjelas bahasanya
-            if (msg.includes("Quota") || msg.includes("429") || msg.includes("limit")) {
-                msg = "⏳ Kuota Harian/Menit habis atau Server Sibuk. Tunggu 2 menit ya!";
-            }
-            
-            alert("⚠️ INFO: " + msg);
+            alert("⚠️ INFO: " + e.message);
         }
     }
 </script>
