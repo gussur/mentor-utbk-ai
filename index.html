@@ -333,41 +333,67 @@ async function tanyaAI() {
         const resultBox = document.getElementById('ai-result');
         const skorAkhir = document.getElementById('final-score').innerText;
 
+        // Reset tampilan
         btn.style.display = 'none'; 
         loading.style.display = 'block';
+        resultBox.style.display = 'none';
         
-        // Animasi Loading
-        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang berpikir...</div>`;
+        // Indikator Loading
+        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🔍 Menghubungi Google...<br><small>Mohon tunggu...</small></div>`;
 
+        // 1. Siapkan Prompt
         let promptText = `Saya siswa UTBK. Skor Tryout: ${skorAkhir}/1000.\nAnalisis performa saya berdasarkan riwayat ini:\n`;
-        userHistory.forEach((h, i) => { promptText += `Soal ${i+1}: ${h.soal.substring(0,30)}... [Jawab: ${h.jawabanUser} | Status: ${h.isCorrect?'Benar':'Salah'}]\n`; });
-        promptText += `\nBerikan saran strategi belajar singkat & padat.`;
+        // Kita persingkat history biar hemat token dan mengurangi risiko error parsing
+        userHistory.forEach((h, i) => { 
+            promptText += `Soal ${i+1}: Status ${h.isCorrect?'Benar':'Salah'}\n`; 
+        });
+        promptText += `\nBerikan saran strategi belajar singkat, padat, dan menyemangati.`;
 
         try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY_GEMINI}`, {
+            // 2. Tembak API Google
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY_GEMINI}`;
+            
+            const res = await fetch(url, {
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                body: JSON.stringify({ 
+                    contents: [{ parts: [{ text: promptText }] }] 
+                })
             });
 
             const data = await res.json();
-            
-            // 👇 DETEKSI ERROR DARI GOOGLE 👇
-            if (data.error) {
-                throw new Error(data.error.message || "Ada masalah di API Google");
+
+            // 3. CEK ERROR DARI GOOGLE (INI KUNCINYA)
+            if (!res.ok) {
+                // Ambil pesan error spesifik dari respon JSON Google
+                let pesanErrorGoogle = "Unknown Error";
+                if (data.error && data.error.message) {
+                    pesanErrorGoogle = data.error.message;
+                } else {
+                    pesanErrorGoogle = JSON.stringify(data);
+                }
+                throw new Error(pesanErrorGoogle);
             }
 
+            // 4. Jika Sukses
             loading.style.display = 'none'; 
             resultBox.style.display = 'block';
-            resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
+            
+            // Cek apakah ada kandidat jawaban
+            if (data.candidates && data.candidates.length > 0) {
+                resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
+            } else {
+                throw new Error("AI tidak memberikan jawaban (Candidates Empty).");
+            }
             
         } catch (e) {
+            // 5. TAMPILKAN ERROR APA ADANYA
             loading.style.display = 'none'; 
             btn.style.display = 'block';
             
-            // 👇 MUNCULKAN PESAN ERROR ASLI BIAR KETAHUAN PENYEBABNYA 👇
-            alert("⚠️ Gagal: " + e.message); 
-            console.error(e);
+            // Alert ini akan berisi PESAN ASLI dari Google
+            alert("❌ GAGAL: " + e.message); 
+            console.error("Detail Error:", e);
         }
     }
 </script>
