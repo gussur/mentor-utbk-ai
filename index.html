@@ -337,64 +337,60 @@ async function tanyaAI() {
         loading.style.display = 'block';
         resultBox.style.display = 'none';
 
-        // Daftar model yang akan dicoba satu per satu
-        const models = [
-            "gemini-1.5-flash",        // Pilihan 1: Flash Hemat & Cepat
-            "gemini-1.5-pro",          // Pilihan 2: Pro Cerdas
-            "gemini-1.0-pro",          // Pilihan 3: Klasik Stabil
-            "gemini-2.0-flash-exp"     // Pilihan 4: Eksperimental Terbaru
-        ];
+        // Kita pakai SATU model saja yang paling stabil untuk akun gratisan
+        const model = "gemini-1.5-flash"; 
 
-        let sukses = false;
-        let pesanErrorTerakhir = "";
+        loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang menganalisis...<br><small>Model: ${model}</small></div>`;
 
-        // Loop untuk mencoba setiap model
-        for (const model of models) {
-            try {
-                // Update status loading biar user tau kita lagi usaha
-                loading.innerHTML = `<div class="loader"></div><div class="loading-text">🔄 Mencoba model <b>${model}</b>...</div>`;
-                
-                let promptText = `Saya siswa UTBK. Skor: ${skorAkhir}/1000. Analisis riwayat singkat ini:\n`;
-                userHistory.forEach((h, i) => { 
-                    promptText += `Soal ${i+1}: ${h.isCorrect?'Benar':'Salah'}\n`; 
-                });
-                promptText += `\nBeri saran strategi belajar singkat padat.`;
+        // Prompt kita persingkat biar tidak membebani server
+        let promptText = `Saya siswa UTBK. Skor: ${skorAkhir}/1000. Analisis riwayat singkat ini:\n`;
+        userHistory.forEach((h, i) => { 
+            // Cuma kirim status Benar/Salah biar hemat token
+            promptText += `Soal ${i+1}: ${h.isCorrect?'Benar':'Salah'}\n`; 
+        });
+        promptText += `\nBeri saran strategi belajar singkat padat.`;
 
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY_GEMINI}`;
-                
-                const res = await fetch(url, {
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-                });
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY_GEMINI}`;
+            
+            const res = await fetch(url, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+            });
 
-                const data = await res.json();
+            const data = await res.json();
 
-                if (!res.ok) {
-                    throw new Error(data.error ? data.error.message : "Gagal");
-                }
-
-                if (data.candidates && data.candidates.length > 0) {
-                    // BERHASIL! Tampilkan hasil
-                    loading.style.display = 'none'; 
-                    resultBox.style.display = 'block';
-                    resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
-                    sukses = true;
-                    break; // Keluar dari loop karena sudah berhasil
-                }
-                
-            } catch (e) {
-                console.warn(`Gagal pakai ${model}:`, e);
-                pesanErrorTerakhir = e.message;
-                // Lanjut ke model berikutnya di daftar...
+            // 👇 MENANGANI SERVER SIBUK (RATE LIMIT)
+            if (res.status === 429) {
+                throw new Error("🚦 Server AI sedang sibuk/penuh. Mohon tunggu 1-2 menit, lalu coba klik lagi.");
             }
-        }
 
-        // Kalau sudah coba semua model tapi masih gagal juga
-        if (!sukses) {
+            if (!res.ok) {
+                let pesan = data.error ? data.error.message : "Gagal terhubung ke Google";
+                throw new Error(pesan);
+            }
+
+            if (data.candidates && data.candidates.length > 0) {
+                loading.style.display = 'none'; 
+                resultBox.style.display = 'block';
+                resultBox.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
+            } else {
+                throw new Error("AI tidak memberikan jawaban (Respon kosong).");
+            }
+            
+        } catch (e) {
             loading.style.display = 'none'; 
             btn.style.display = 'block';
-            alert("❌ MENYERAH: Semua model AI menolak.\nError terakhir: " + pesanErrorTerakhir);
+            
+            // Tampilkan pesan error yang manusiawi
+            let msg = e.message;
+            // Kalau errornya soal kuota/429, kita perjelas bahasanya
+            if (msg.includes("Quota") || msg.includes("429") || msg.includes("limit")) {
+                msg = "⏳ Kuota Harian/Menit habis atau Server Sibuk. Tunggu 2 menit ya!";
+            }
+            
+            alert("⚠️ INFO: " + msg);
         }
     }
 </script>
