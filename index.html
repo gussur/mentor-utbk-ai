@@ -337,8 +337,8 @@ async function tanyaAI() {
         loading.style.display = 'block';
         resultBox.style.display = 'none';
 
-        // 👇 KITA PAKAI MODEL 2.0 (KARENA INI YANG TERBUKTI NYAMBUNG DI SCREENSHOT TADI)
-        const model = "gemini-2.0-flash-exp"; 
+        // 👇 KITA PAKAI MODEL flash-8b (KARENA INI YANG TERBUKTI NYAMBUNG DI SCREENSHOT TADI)
+        const model = "gemini-1.5-flash-8b"; 
 
         loading.innerHTML = `<div class="loader"></div><div class="loading-text">🧠 AI sedang menganalisis...<br><small>Model: ${model}</small></div>`;
 
